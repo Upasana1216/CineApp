@@ -1,0 +1,83 @@
+// CineBook Lite - Enhanced Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  name      String
+  bookings  Booking[]
+}
+
+model Movie {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  shows       Show[]
+}
+
+model Show {
+  id        Int       @id @default(autoincrement())
+  startTime DateTime
+  movieId   Int
+  movie     Movie     @relation(fields: [movieId], references: [id])
+  showSeats ShowSeat[]
+  bookings  Booking[]
+}
+
+// Separate Seat definition from Show-specific availability
+model Seat {
+  id        Int        @id @default(autoincrement())
+  number    String     // e.g. A1, A2
+  showSeats ShowSeat[]
+}
+
+model ShowSeat {
+  id       Int            @id @default(autoincrement())
+  showId   Int
+  seatId   Int
+  price    Decimal
+  status   ShowSeatStatus @default(AVAILABLE)
+  lockedAt DateTime?
+  lockedBy Int?
+
+  show Show @relation(fields: [showId], references: [id])
+  seat Seat @relation(fields: [seatId], references: [id])
+
+  @@unique([showId, seatId])
+}
+
+enum ShowSeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+  UNAVAILABLE
+}
+
+model Booking {
+  id             Int           @id @default(autoincrement())
+  bookingNumber  String        @unique
+  userId         Int
+  showId         Int
+  totalAmount    Decimal
+  status         BookingStatus @default(PENDING)
+  expiresAt      DateTime
+  createdAt      DateTime      @default(now())
+  
+  user User @relation(fields: [userId], references: [id])
+  show Show @relation(fields: [showId], references: [id])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
